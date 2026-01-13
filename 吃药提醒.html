@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>服药提醒（微信版）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background-color: #f5f8fa;
+            padding: 15px;
+            line-height: 1.5;
+        }
+        .container {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 15px;
+        }
+        h1 {
+            font-size: 18px;
+            color: #2d6a4f;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        /* 倒计时模块 */
+        .countdown {
+            background-color: #e6f7ff;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .countdown h3 {
+            font-size: 14px;
+            color: #1890ff;
+            margin-bottom: 5px;
+        }
+        .countdown span {
+            font-size: 16px;
+            font-weight: bold;
+            color: #d9534f;
+        }
+        /* 设置区 */
+        .setting {
+            margin-bottom: 15px;
+        }
+        .setting h3 {
+            font-size: 15px;
+            color: #2d6a4f;
+            margin-bottom: 10px;
+        }
+        .set-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .set-item label {
+            font-size: 14px;
+            color: #333;
+            min-width: 80px;
+        }
+        .set-item input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            flex: 1;
+            min-width: 100px;
+        }
+        .set-item button {
+            padding: 8px 12px;
+            background-color: #2d6a4f;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 80px;
+        }
+        /* 服药表 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th, td {
+            padding: 10px 5px;
+            border: 1px solid #eee;
+            font-size: 13px;
+            text-align: left;
+        }
+        th {
+            background-color: #2d6a4f;
+            color: #fff;
+            font-size: 14px;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .task-item input {
+            width: 18px;
+            height: 18px;
+            accent-color: #2d6a4f;
+        }
+        /* 提醒弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background: #fff;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            width: 100%;
+            max-width: 300px;
+        }
+        .modal-content h4 {
+            font-size: 16px;
+            color: #d9534f;
+            margin-bottom: 15px;
+        }
+        .modal-content button {
+            padding: 10px 20px;
+            background-color: #2d6a4f;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        /* 底部提醒 */
+        .warning {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #856404;
+        }
+        .warning strong {
+            color: #d9534f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>服药提醒计划表</h1>
+        <!-- 倒计时 -->
+        <div class="countdown">
+            <h3>疗程倒计时</h3>
+            <p>总疗程：<span id="total">14</span>天 | 已服：<span id="used">0</span>天 | 剩余：<span id="left">14</span>天</p >
+        </div>
+        <!-- 设置区 -->
+        <div class="setting">
+            <h3>设置中心</h3>
+            <div class="set-item">
+                <label>早服药：</label>
+                <input type="time" id="mTime" value="07:00">
+                <button onclick="setRemind('m')">设置提醒</button>
+            </div>
+            <div class="set-item">
+                <label>晚服药：</label>
+                <input type="time" id="eTime" value="19:00">
+                <button onclick="setRemind('e')">设置提醒</button>
+            </div>
+            <div class="set-item">
+                <label>总疗程：</label>
+                <input type="number" id="course" min="10" max="14" value="14">
+                <button onclick="setCourse()">确认</button>
+            </div>
+            <div class="set-item">
+                <button onclick="addDay()" style="background-color: #1890ff;">今日服药完成</button>
+            </div>
+        </div>
+        <!-- 服药表 -->
+        <table>
+            <thead>
+                <tr>
+                    <th>时段</th>
+                    <th>药物</th>
+                    <th>剂量</th>
+                    <th>已服</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td rowspan="3">早餐后</td>
+                    <td>散结镇痛胶囊</td>
+                    <td>4粒</td>
+                    <td class="task-item"><input type="checkbox" id="b1"></td>
+                </tr>
+                <tr>
+                    <td>地屈孕酮片</td>
+                    <td>10mg</td>
+                    <td class="task-item"><input type="checkbox" id="b2"></td>
+                </tr>
+                <tr>
+                    <td>益诺胶囊</td>
+                    <td>2粒</td>
+                    <td class="task-item"><input type="checkbox" id="b3"></td>
+                </tr>
+                <tr>
+                    <td>午餐后</td>
+                    <td>散结镇痛胶囊</td>
+                    <td>4粒</td>
+                    <td class="task-item"><input type="checkbox" id="l1"></td>
+                </tr>
+                <tr>
+                    <td rowspan="3">晚餐后</td>
+                    <td>散结镇痛胶囊</td>
+                    <td>4粒</td>
+                    <td class="task-item"><input type="checkbox" id="d1"></td>
+                </tr>
+                <tr>
+                    <td>地屈孕酮片</td>
+                    <td>10mg</td>
+                    <td class="task-item"><input type="checkbox" id="d2" checked></td>
+                </tr>
+                <tr>
+                    <td>益诺胶囊</td>
+                    <td>2粒</td>
+                    <td class="task-item"><input type="checkbox" id="d3" checked></td>
+                </tr>
+            </tbody>
+        </table>
+        <!-- 提醒 -->
+        <div class="warning">
+            <strong>注意</strong>：地屈孕酮固定12小时服用，益诺胶囊血止后咨询医生停药
+        </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h4>⏰ 服药时间到啦！</h4>
+            <p id="modalTxt">请按时吃药哦</p >
+            <button onclick="closeModal()">我知道了</button>
+        </div>
+    </div>
+
+    <script>
+        let timer = null;
+        const modal = document.getElementById('modal');
+        // 初始化数据
+        if(localStorage.total) {
+            document.getElementById('total').textContent = localStorage.total;
+            document.getElementById('course').value = localStorage.total;
+        }
+        if(localStorage.used) {
+            document.getElementById('used').textContent = localStorage.used;
+            document.getElementById('left').textContent = localStorage.total - localStorage.used;
+        }
+        // 设置疗程
+        function setCourse() {
+            const t = document.getElementById('course').value;
+            document.getElementById('total').textContent = t;
+            document.getElementById('left').textContent = t - document.getElementById('used').textContent;
+            localStorage.total = t;
+            alert('疗程已设置！');
+        }
+        // 增加服药天数
+        function addDay() {
+            let used = parseInt(document.getElementById('used').textContent);
+            const total = parseInt(document.getElementById('total').textContent);
+            if(used >= total) {
+                alert('疗程已结束！');
+                return;
+            }
+            used +=1;
+            document.getElementById('used').textContent = used;
+            document.getElementById('left').textContent = total - used;
+            localStorage.used = used;
+            // 重置勾选
+            document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+            alert('今日服药记录完成！');
+        }
+        // 设置提醒
+        function setRemind(type) {
+            const time = type === 'm' ? document.getElementById('mTime').value : document.getElementById('eTime').value;
+            const [h, m] = time.split(':');
+            const now = new Date();
+            const rt = new Date();
+            rt.setHours(h, m, 0);
+            if(rt < now) rt.setDate(rt.getDate() + 1);
+            const diff = rt - now;
+            const tip = type === 'm' ? '早餐后服药时间到啦' : '晚餐后服药时间到啦';
+            if(timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                document.getElementById('modalTxt').textContent = tip;
+                modal.style.display = 'flex';
+                // 震动提醒（微信支持）
+                if(navigator.vibrate) navigator.vibrate([200,100,200]);
+            }, diff);
+            alert(`已设置${time}提醒，到点会弹窗哦！`);
+        }
+        // 关闭弹窗
+        function closeModal() {
+            modal.style.display = 'none';
+            const now = new Date().getHours();
+            if(now >=7 && now <12) document.getElementById('b2').checked = true;
+            if(now >=18) document.getElementById('d2').checked = true;
+        }
+    </script>
+</body>
+</html>
